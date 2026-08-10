@@ -10,6 +10,8 @@ import com.vishwesh.jwt_authentication_series_01.repository.UserRepository;
 import com.vishwesh.jwt_authentication_series_01.security.CustomUserDetails;
 import com.vishwesh.jwt_authentication_series_01.security.JwtService;
 import com.vishwesh.jwt_authentication_series_01.service.AuthenticationService;
+import com.vishwesh.jwt_authentication_series_01.service.RefreshTokenService;
+import com.vishwesh.jwt_authentication_series_01.util.LogHelper;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -27,18 +29,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
+    private final RefreshTokenService refreshTokenService;
+
     public AuthenticationServiceImpl(
             UserMapper userMapper,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            AuthenticationManager authenticationManager
+            AuthenticationManager authenticationManager,
+
+            RefreshTokenService refreshTokenService
     ){
         this.userMapper= userMapper;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+
+        this.refreshTokenService = refreshTokenService;
     }
 
 
@@ -71,15 +79,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     )
             );
 
-            System.out.println(">>> [LOGIN SUCCESS] AuthenticationManager approved user!");
+            System.out.println(">>> [LOGIN SUCCESS] AuthenticationManager approved user!" + LogHelper.toPrettyJson(authentication));
 
             // 2. Retrieve authenticated CustomUserDetails principal
             CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
 
-            String jwtToken = jwtService.generateToken(customUserDetails);
+            System.out.println(">> [customUserDetails] fetched" + LogHelper.toPrettyJson(customUserDetails));
+
+            String jwtToken = jwtService.generateAccessToken(customUserDetails);
+//            String refreshToken = jwtService.generateRefreshToken();
             System.out.println(">>> [JWT GENERATED] Token generated successfully!" + jwtToken);
 
             UserEntity userEntity = customUserDetails.getUserEntity();
+
+            String refreshToken = refreshTokenService.createRefreshToken(userEntity);
+            System.out.println(">>> [Refresh Token Saved] !" + refreshToken);
+
 
             // 3. Return mapped user response (Later you will return a JWT Token here)
 //            return userMapper.toResponse(userEntity);
@@ -91,6 +106,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             return LoginResponse.builder()
                     .token(jwtToken)
+                    .refreshToken(refreshToken)
                     .user(userResponse)
                     .build();
 
@@ -100,6 +116,45 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
     }
 
+
+    @Override
+    public LoginResponse refreshAccessToken(String refreshToken){
+      try{
+          UserEntity user = refreshTokenService.validateRefreshToken(refreshToken)
+                  .orElseThrow(() -> new RuntimeException("User not found"));
+
+          CustomUserDetails customUserDetails = new CustomUserDetails(user);
+
+          System.out.println(">> [IN REACCESSED]" + LogHelper.toPrettyJson(customUserDetails));
+
+          String newAccessToken = jwtService.generateAccessToken(customUserDetails);
+
+          System.out.println(">> [IN REACCESSED]" + newAccessToken);
+
+          UserResponse userResponse = userMapper.toResponse(user);
+
+          return LoginResponse
+                  .builder()
+                  .token(newAccessToken)
+                  .refreshToken(refreshToken)
+                  .user(userResponse)
+                  .build();
+      } catch (Exception e) {
+          throw new RuntimeException(e);
+      }
+    };
+
+    @Override
+    public UserResponse getUserWithRefresh(String refreshToken){
+        try{
+            UserEntity user = refreshTokenService.validateRefreshToken(refreshToken)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            return userMapper.toResponse(user);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    };
 
     @Override
     public UserResponse getMe(CustomUserDetails userDetails) {

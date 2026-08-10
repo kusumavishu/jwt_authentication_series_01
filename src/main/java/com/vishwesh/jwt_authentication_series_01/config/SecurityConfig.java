@@ -49,8 +49,8 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/me").authenticated()
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers("/auth/refresh").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -60,4 +60,8 @@ public class SecurityConfig {
 
         return http.build();
     }
+
+//                        .requestMatchers("/auth/me").authenticated()
+//                        .requestMatchers("/auth/refresh/me").authenticated()
+//                        .requestMatchers("/auth/**").permitAll()
 }
