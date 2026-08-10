@@ -43,17 +43,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.refreshTokenService = refreshTokenService;
     };
 
-//    @Override
-//    protected boolean shouldNotFilter(
-//            HttpServletRequest request
-//    ) throws ServletException {
-//        String path = request.getServletPath();
-//
-//        // Skip JWT verification for these specific endpoints
-//        return path.equals("/auth/login") ||
-//                path.equals("/auth/refresh") ||
-//                path.equals("/auth/refresh/me");
-//    }
+    @Override
+    protected boolean shouldNotFilter(
+            HttpServletRequest request
+    ) throws ServletException {
+        String path = request.getServletPath();
+
+        return path.equals("/auth/login") ||
+                path.equals("/auth/refresh");
+    }
 
     @Override
     protected void doFilterInternal(

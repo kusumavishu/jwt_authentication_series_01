@@ -92,7 +92,7 @@ logging:
 
 jwt:
   secret: JWT_KEY_FOR_springboot_with_supabase_ON_DD28MM06YYYY2026
-  access-token-expiration: 900000
+  access-token-expiration: 18000 #  900000
   refresh-token-expiration: 604800000
 
 # CORS Configuration
